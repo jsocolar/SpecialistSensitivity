@@ -1,5 +1,5 @@
-#user <- "JacobSocolar"
-user <- "Jacob"
+user <- "JacobSocolar"
+#user <- "Jacob"
 
 setwd(paste0("/Users/",user,"/Dropbox/Work/Iquitos/Data"))
 '%ni%' <- Negate('%in%')
@@ -143,29 +143,37 @@ stotz$flood.nfor <- stotz$N11 %in% c("Y") | stotz$N12 %in% c("Y") | stotz$A1 %in
   stotz$A6 %in% c("Y") | stotz$A8 %in% c("Y") | stotz$A9 %in% c("Y")
 stotz$flood.all <- stotz$flood.for | stotz$flood.nfor
 stotz$upland.for <- stotz$F1 %in% c("Y") | stotz$F12 %in% c("Y")
-stotz$forest <- (stotz$flood.for == 1) | (stotz$upland.for == 1)
-stotz$forest.special <- stotz$forest & !stotz$flood.nfor
+stotz$forest.based <- (stotz$flood.for == 1) | (stotz$upland.for == 1)
 stotz$tf <- stotz$F1 %in% c("Y")
 
+# forest-based species
+FBsp <- as.character(stotz$sp[stotz$forest.based])
+cFBsp <- FBsp[FBsp %in% cdata$Species]
+
+# forest-specialist species
+FSsp <- as.character(stotz$sp[stotz$forest.based & !stotz$flood.nfor])
+cFSsp <- FSsp[FSsp %in% cdata$Species]
+
+# forest-based floodplain specialists
 FFsp <- as.character(stotz$sp[stotz$flood.for & !stotz$upland.for])
 cFFsp <- FFsp[FFsp %in% cdata$Species]
 
+# non-forest-based floodplain specialists (may overlap with forest-based species)
 FNsp <- as.character(stotz$sp[stotz$flood.nfor & !stotz$upland.for])
 cFNsp <- FNsp[FNsp %in% cdata$Species]
 
+# all floodplain specialists
 allfloodsp <- unique(c(cFFsp, cFNsp))
 
+# upland specialists
 TFsp <- as.character(stotz$sp[stotz$tf & !(stotz$flood.for | stotz$flood.nfor)])
 cTFsp <- TFsp[TFsp %in% cdata$Species]
 
 tfexclude <- read.csv("tf_exclude.csv", header = F)
 cTFsp <- cTFsp[cTFsp %ni% tfexclude[,1]]
 
-Forestsp <- stotz$sp[stotz$forest]
-cForestsp <- Forestsp[Forestsp %in% cdata$Species]
-
 spec <- read.csv("specialists.csv")
-extras <- read.csv("flood_specialist_extras.csv")
+floodextras <- read.csv("flood_specialist_extras.csv")
 
 spec[is.na(spec)] <- 0
 
@@ -173,18 +181,13 @@ specialists <- data.frame(species=spec$Species, poor=((spec$WhiteSand.Alvarez+sp
                           rich=((spec$Richsoil.Alvarez + spec$Richsoil.Pomara)>0), river = spec$RiverLimit, migratory = spec$Mig)
 specialists$flood <- 0
 specialists$flood[specialists$species %in% allfloodsp] <- 1
-specialists$flood[specialists$species %in% extras$Extras] <- 1
-specialists$flood.forest <- 0
-specialists$flood.forest[specialists$species %in% cFFsp] <- 1
-specialists$flood.forest[specialists$species %in% extras$Extras[which(!is.na(extras$Forest))]] <- 1
+specialists$flood[specialists$species %in% floodextras$Extras] <- 1
 specialists$tf <- 0
 specialists$tf[specialists$species %in% cTFsp] <- 1
 specialists$forest.based <- 0
-specialists$forest.based[specialists$species %in% cForestsp] <- 1
+specialists$forest.based[specialists$species %in% cFBsp] <- 1
 specialists$forest.specialist <- 0
-specialists$forest.specialist[]
-specialists$flood.nonforest <- specialists$flood - specialists$flood.forest
-
+specialists$forest.specialist[specialists$species %in% cFSsp] <- 1
 
 traits <- read.delim(paste0("/Users/",user,"/Dropbox/Work/Useful_data/EltonTraits/BirdFuncDat.txt"), header=T, stringsAsFactors = F)   # traits data (includes diet)
 traits$sciName <- gsub(" ", "_", traits$Scientific)
@@ -270,57 +273,123 @@ sum(c(specialists$ForStrat.wataroundsurf, specialists$ForStrat.watbelowsurf, spe
   sum(c(specialists$ForStrat.wataroundsurf, specialists$ForStrat.watbelowsurf, specialists$ForStrat.aerial,
         specialists$ForStrat.canopy, specialists$ForStrat.ground, specialists$ForStrat.midhigh, specialists$ForStrat.understory))
 
+specialists$StanStrat.ground <- scale(specialists$ForStrat.ground)
+specialists$StanStrat.understory <- scale(specialists$ForStrat.understory)
+specialists$StanStrat.midstory <- scale(specialists$ForStrat.midhigh)
 
-global_stanMER <- rstanarm::stan_glmer(formula = abun.double ~ (1|species) + 
-                                           ForStrat.ground + ForStrat.understory + ForStrat.midhigh + 
-                                           diet + scale.mass + 
-                                           forest.based + forest.special + river + flood.forest + 
-                                           flood.nonforest + tf + poor + 
-                                           rich, family = 'binomial', data = specialists, seed = 8, cores = 4)
-summary(all_vars_stanMER_2)[1:17,]
+model.fits <- list()
 
-functional_vars_stanMER <- rstanarm::stan_glmer(formula = abun.double ~ (1|species) + 
-                                                  stratum + diet + scale.mass + 
-                                                  forest, family = 'binomial', data = specialists, seed = 8, cores = 4)
-summary(functional_vars_stanMER)[1:11,]
+model.fits$global_stanMER <- 
+  rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
+                         forest.based + forest.specialist + #forest
+                         StanStrat.ground + StanStrat.understory + StanStrat.midstory + diet + scale.mass + migratory + #traits
+                         river + flood + tf + poor + rich, #specialization
+                       family = 'binomial', data = specialists, seed = 8, cores = 4)
+summary(model.fits$global_stanMER)[1:17,]
 
-functional_vars_stanMER_2 <- rstanarm::stan_glmer(formula = abun.double ~ (1|species) + 
-                                                  ForStrat.ground + ForStrat.understory + ForStrat.midhigh +
-                                                  diet + scale.mass + forest, 
-                                                family = 'binomial', data = specialists, seed = 8, cores = 4)
-summary(functional_vars_stanMER_2)[1:11,]
+model.fits$null_stanMER <-
+  rstanarm::stan_glmer(formula = abun.double ~ (1|species),  #null
+                       family = 'binomial', data = specialists, seed = 8, cores = 4)
+summary(model.fits$null_stanMER)[1:17,]
 
-hab_vars_stanMER <- rstanarm::stan_glmer(formula = abun.double ~ (1|species) + 
-                                           forest + river + flood.forest + 
-                                           flood.nonforest + tf + poor + 
-                                           rich, family = 'binomial', data = specialists, seed = 8, cores = 4)
-summary(hab_vars_stanMER)[1:8,]
+model.fits$null2_stanMER <- 
+  rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
+                         forest.based + forest.specialist, #forest
+                       family = 'binomial', data = specialists, seed = 8, cores = 4)
+summary(model.fits$null2_stanMER)[1:17,]
 
-functional_vars_stanMER_3 <- rstanarm::stan_glmer(formula = abun.double ~ (1|species) + 
-                                                  stratum + diet + scale.mass, 
-                                                  family = 'binomial', data = specialists, seed = 8, cores = 4)
-summary(functional_vars_stanMER_3)[1:11,]
+model.fits$specialization_stanMER <- 
+  rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
+                         forest.based + forest.specialist + #forest
+                         river + flood + tf + poor + rich, #specialization
+                       family = 'binomial', data = specialists, seed = 8, cores = 4)
+summary(model.fits$specialization_stanMER)[1:17,]
 
-functional_vars_stanMER_4 <- rstanarm::stan_glmer(formula = abun.double ~ (1|species) + 
-                                                    ForStrat.ground + ForStrat.understory + ForStrat.midhigh +
-                                                    diet + scale.mass, 
-                                                  family = 'binomial', data = specialists, seed = 8, cores = 4)
-summary(functional_vars_stanMER_4)[1:11,]
+model.fits$traits_stanMER <- 
+  rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
+                         forest.based + forest.specialist + #forest
+                         StanStrat.ground + StanStrat.understory + StanStrat.midstory + diet + scale.mass + migratory, #traits
+                       family = 'binomial', data = specialists, seed = 8, cores = 4)
+summary(model.fits$traits_stanMER)[1:17,]
 
+model.fits$traits2_stanMER <- 
+  rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
+                         forest.based + forest.specialist + #forest
+                         diet + scale.mass + migratory, #traits
+                       family = 'binomial', data = specialists, seed = 8, cores = 4)
+summary(model.fits$traits2_stanMER)[1:17,]
 
-kfold_all_vars <- rstanarm::kfold(all_vars_stanMER)
-kfold_all_vars_2 <- rstanarm::kfold(all_vars_stanMER_2)
-kfold_functional_vars <- rstanarm::kfold(functional_vars_stanMER)
-kfold_functional_vars_2 <- rstanarm::kfold(functional_vars_stanMER_2)
-kfold_functional_vars_3 <- rstanarm::kfold(functional_vars_stanMER_3)
-kfold_functional_vars_4 <- rstanarm::kfold(functional_vars_stanMER_4)
-kfold_hab_vars <- rstanarm::kfold(hab_vars_stanMER)
+save(model.fits, file = "model_fits.Rdata")
+load("model_fits.Rdata")
 
-rstanarm::compare_models(kfold_all_vars, kfold_all_vars_2, kfold_functional_vars,
-                         kfold_functional_vars_2, kfold_functional_vars_3, kfold_functional_vars_4,
-                         kfold_hab_vars)
-rstanarm::compare_models(kfold_all_vars_2, kfold_hab_vars)
-rstanarm::compare_models(kfold_functional_vars_2, kfold_hab_vars)
+Xvalid <- list()
+Xvalid$global <- rstanarm::kfold(model.fits$global_stanMER)
+Xvalid$null <- rstanarm::kfold(model.fits$null_stanMER)
+Xvalid$null2 <- rstanarm::kfold(model.fits$null2_stanMER)
+Xvalid$specialization <- rstanarm::kfold(model.fits$specialization_stanMER)
+Xvalid$traits <- rstanarm::kfold(model.fits$traits_stanMER)
+Xvalid$traits2 <- rstanarm::kfold(model.fits$traits2_stanMER)
 
-summary(all_vars_stanMER_2)[1:16,]
-summary(all_vars_stanMER_2)[c(185,193,194,263,265,374,446)-1,]
+save(Xvalid, file = "Xvalid.Rdata")
+
+rstanarm::compare_models(Xvalid$global, Xvalid$null, Xvalid$null2, Xvalid$specialization, Xvalid$traits, Xvalid$traits2)
+rstanarm::compare_models(Xvalid$global, Xvalid$specialization)
+rstanarm::compare_models(Xvalid$specialization, Xvalid$traits)
+
+###### Extract parameter estimates for plotting ###########
+# How many total parameters?
+pn <- vector()
+pnames <- vector()
+pmu <- vector()
+plci <- vector()
+puci <- vector()
+for(i in 1:length(model.fits)){
+  pn[i] <- which(rownames(summary(model.fits[[i]])) == "b[(Intercept) species:Amazilia_fimbriata]") - 1
+  pnames <- c(pnames, rownames(summary(model.fits[[i]]))[1:pn[i]])
+  pmu <- c(pmu, summary(model.fits[[i]])[1:pn[i], 1])
+  plci <- c(plci, summary(model.fits[[i]])[1:pn[i], 4])
+  puci <- c(puci, summary(model.fits[[i]])[1:pn[i], 8])
+}
+param_est <- data.frame(model = rep(names(model.fits), pn), parameter = pnames, pMean = pmu,
+                        L95 = plci, U95 = puci)
+
+coef.names <- unique(param_est$parameter)
+n.coef <- length(coef.names)
+model.names <- unique(param_est$model)
+n.model <- length(model.names)
+
+colors <- viridis::viridis(n.model, begin = .1)
+
+param_est$color <- NA
+param_est$color[param_est$model == "global_stanMER"] <- colors[1]
+param_est$color[param_est$model == "null_stanMER"] <- colors[2]
+param_est$color[param_est$model == "null2_stanMER"] <- colors[3]
+param_est$color[param_est$model == "specialization_stanMER"] <- colors[4]
+param_est$color[param_est$model == "traits_stanMER"] <- colors[5]
+param_est$color[param_est$model == "traits2_stanMER"] <- colors[6]
+
+pchs <- c(24,22,21,23,20,25)
+
+pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/GLM_coefs.pdf"), width = 8, height = 10)
+
+plot(c(1,1), t='n', axes=F, xlab = 'effect size', ylab = "", xlim = c(-8,8), ylim = c(0,22))
+lines(c(0,0), c(0,22), col = 'gray')
+axis(side = 1, at = 2*c(-4:4))
+
+plotting_height <- 0
+for(i in 1:n.coef){
+  plotting_height <- plotting_height + .5
+  counter <- 0
+  for(j in 1:n.model){
+    k <- which(param_est$model == model.names[n.model + 1 - j] & param_est$parameter == coef.names[n.coef + 1 - i])
+    if(length(k) == 1){
+      counter <- counter + 1
+      plotting_height <- plotting_height + .25
+      lines(c(param_est$L95[k], param_est$U95[k]), rep(plotting_height, 2), col = param_est$color[k])
+      points(x = param_est$pMean[k], y = plotting_height, col = param_est$color[k], pch = pchs[j], bg = param_est$color[k])
+    }
+  }
+}
+
+dev.off()
+
