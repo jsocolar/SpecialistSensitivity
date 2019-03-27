@@ -336,6 +336,21 @@ rstanarm::compare_models(Xvalid$global, Xvalid$null, Xvalid$null2, Xvalid$specia
 rstanarm::compare_models(Xvalid$global, Xvalid$specialization)
 rstanarm::compare_models(Xvalid$specialization, Xvalid$traits)
 
+###### Percent (latent) variance explained #########
+load("model_fits.Rdata")
+re_variances_df <- data.frame(global = as.data.frame(model.fits$global_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2,
+                              null = as.data.frame(model.fits$null_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2,
+                              null2 = as.data.frame(model.fits$null2_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2,
+                              specialization = as.data.frame(model.fits$specialization_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2,
+                              traits = as.data.frame(model.fits$traits_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2,
+                              traits2 = as.data.frame(model.fits$traits2_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2)
+
+var_explained <- function(name, df = re_variances_df){return((df["null"] - df[name])/df["null"])}
+
+summary2 <- function(x){return(list(mean = mean(x), lci = quantile(x, .025), uci = quantile(x, .975)))}
+
+summary(var_explained("global")[,1])
+
 ###### Extract parameter estimates for plotting ###########
 # How many total parameters?
 pn <- vector()
@@ -370,9 +385,29 @@ param_est$color[param_est$model == "traits2_stanMER"] <- colors[6]
 
 pchs <- c(24,22,21,23,20,25)
 
-pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/GLM_coefs.pdf"), width = 8, height = 10)
+plotting_height <- 0
+ph <- vector()
+counter1 <- 0
+for(i in 1:n.coef){
+  plotting_height <- plotting_height + .5
+  counter <- 0
+  counter1 <- counter1 + 1
+  ph[counter1] <- plotting_height
+  for(j in 1:n.model){
+    k <- which(param_est$model == model.names[n.model + 1 - j] & param_est$parameter == coef.names[n.coef + 1 - i])
+    if(length(k) == 1){
+      counter <- counter + 1
+      plotting_height <- plotting_height + .25
+    }
+  }
+}
 
-plot(c(1,1), t='n', axes=F, xlab = 'effect size', ylab = "", xlim = c(-8,8), ylim = c(0,22))
+
+pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/GLM_coefs.pdf"), width = 10.5, height = 10)
+
+plot(c(1,1), t='n', axes=F, xlab = 'effect size', ylab = "", xlim = c(-8,13), ylim = c(0,22))
+rect(xleft = -8, xright = 13, ybottom = ph[1] - .25, ytop = ph[6] - .1, col = 'gray94', border = NA)
+rect(xleft = -8, xright = 13, ybottom = ph[15] - .25, ytop = ph[17] - .1, col = 'gray94', border = NA)
 lines(c(0,0), c(0,22), col = 'gray')
 axis(side = 1, at = 2*c(-4:4))
 
@@ -393,3 +428,141 @@ for(i in 1:n.coef){
 
 dev.off()
 
+###### Figure 2: floodplain birds in disturbed and intact floodplains and uplands #####
+cdata$tpt <- paste(cdata$Transect, cdata$Point, sep = "_")
+allpoints <- cdata[!duplicated(cdata$tpt), c('Transect', 'Hab', 'Dis', 'Point', 'tpt')]
+allpoints$nfloodsp <- 0
+allpoints$nfloodindiv <- 0
+fdata <- cdata[cdata$Species %in% allfloodsp, ]
+for(i in 1:nrow(allpoints)){
+  fdata_pt <- fdata[fdata$tpt == allpoints$tpt[i], ]
+  allpoints$nfloodsp[i] <- length(unique(fdata_pt$Species))
+  
+  counter <- 0
+  flood_abuns <- vector()
+  for(j in allfloodsp){
+    fsppt <- fdata_pt[fdata_pt$Species == j, ]
+    if(nrow(fsppt) > 0){
+      counter <- counter + 1
+      flood_abuns[counter] <- max(fsppt$Count)
+    }
+  }
+  
+  allpoints$nfloodindiv[i] <- sum(flood_abuns)
+}
+
+se <- function(x){sqrt(var(x)/length(x))}
+
+barplotdata <- data.frame(group = c("f.p", "f.d", "t.p", "t.d"),
+                          mean.rich = c(mean(allpoints$nfloodsp[allpoints$Hab == "V" & allpoints$Dis == "P"]),
+                                        mean(allpoints$nfloodsp[allpoints$Hab == "V" & allpoints$Dis == "D"]),
+                                        mean(allpoints$nfloodsp[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "P"]),
+                                        mean(allpoints$nfloodsp[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "D"])),
+                          se.rich = c(se(allpoints$nfloodsp[allpoints$Hab == "V" & allpoints$Dis == "P"]),
+                                      se(allpoints$nfloodsp[allpoints$Hab == "V" & allpoints$Dis == "D"]),
+                                      se(allpoints$nfloodsp[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "P"]),
+                                      se(allpoints$nfloodsp[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "D"])),
+                          mean.abun = c(mean(allpoints$nfloodindiv[allpoints$Hab == "V" & allpoints$Dis == "P"]),
+                                        mean(allpoints$nfloodindiv[allpoints$Hab == "V" & allpoints$Dis == "D"]),
+                                        mean(allpoints$nfloodindiv[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "P"]),
+                                        mean(allpoints$nfloodindiv[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "D"])),
+                          se.abun = c(se(allpoints$nfloodindiv[allpoints$Hab == "V" & allpoints$Dis == "P"]),
+                                      se(allpoints$nfloodindiv[allpoints$Hab == "V" & allpoints$Dis == "D"]),
+                                      se(allpoints$nfloodindiv[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "P"]),
+                                      se(allpoints$nfloodindiv[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "D"]))
+                          )
+barplotdata$lse.rich <- barplotdata$mean.rich - barplotdata$se.rich
+barplotdata$use.rich <- barplotdata$mean.rich + barplotdata$se.rich
+barplotdata$lse.abun <- barplotdata$mean.abun - barplotdata$se.abun
+barplotdata$use.abun <- barplotdata$mean.abun + barplotdata$se.abun
+
+
+pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/flood_specialist_rich.pdf"), width = 5.2, height = 5)
+barplot(height = matrix(barplotdata$mean.rich, nrow = 2), beside = T, ylim = c(0,22), names.arg = c("floodplain", "terra firme"),
+        col = c("gray60", "gray90"), main = "floodplain specialist richness", xlab = "forest-type", legend = c("primary forest", "agriculture"))
+for(i in 1:4){
+  lines(c(.5 + i + (i > 2), .5 + i + (i > 2)), c(barplotdata$lse.rich[i], barplotdata$use.rich[i]), col = "black", lwd = 2)
+}
+dev.off()
+
+pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/flood_specialist_abun.pdf"), width = 5.2, height = 5)
+barplot(height = matrix(barplotdata$mean.abun, nrow = 2), beside = T, ylim = c(0,37), names.arg = c("floodplain", "terra firme"),
+        col = c("gray60", "gray90"), main = "floodplain specialist abundance", xlab = "forest-type", legend = c("primary forest", "agriculture"))
+for(i in 1:4){
+  lines(c(.5 + i + (i > 2), .5 + i + (i > 2)), c(barplotdata$lse.abun[i], barplotdata$use.abun[i]), col = "black", lwd = 2)
+}
+dev.off()
+
+
+###### Plotting veg data ######
+veg_data <- read.csv("/Users/JacobSocolar/Dropbox/Work/Iquitos/Data/Transect_locations.csv", fileEncoding = "latin1")
+veg_data[is.na(veg_data)] <- 0
+veg_data <- veg_data[-which(veg_data$Discard == 1), ]
+veg_d <- veg_data[veg_data$Disturbance == "D", ]
+veg_p <- veg_data[veg_data$Disturbance == "U", ]
+
+veg_dd <- veg_d
+veg_dd$Habitat <- as.character(veg_dd$Habitat)
+veg_dd$Habitat[veg_dd$Habitat == "Arena Blanca"] <- "White-sand points"
+veg_dd$Habitat[veg_dd$Habitat == "Tierra Firme"] <- "Upland points"
+veg_dd$Habitat[veg_dd$Habitat == "Varzea"] <- "Floodplain points"
+veg_dd$Habitat <- as.factor(veg_dd$Habitat)
+veg_dd$Habitat <- factor(veg_dd$Habitat, levels=c("Upland points","Floodplain points","White-sand points"))
+veg_dd$riverNS <- NA
+veg_dd$riverNS[veg_dd$Location == "Miraflores"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "Km77"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "ExplorNapo"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "El Varillal"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "Moronacocha"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "Nueva Esperanza"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "El Dorado"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "Indiana"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "Km35"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "Sabalillo"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "Santa Clotilde"] <- "N"
+veg_dd$riverNS[veg_dd$Location == "Jenaro Herrera"] <- "S"
+veg_dd$riverNS[veg_dd$Location == "Requena"] <- "S"
+veg_dd$riverNS[veg_dd$Location == "Chino"] <- "S"
+veg_dd$riverNS[veg_dd$Location == "Tamshiyacu"] <- "S"
+veg_dd$riverNS[veg_dd$Location == "Madre Selva"] <- "S"
+
+veg_dd$CCF <- 100*(veg_dd$TallCCF + veg_dd$ShortCCF.including.old.gap.)/(100-veg_dd$Lake.stream.15m)
+
+vegNS <- data.frame(group = c("N", "S"),
+                    CCFmean = c(mean(veg_dd$CCF[veg_dd$riverNS == "N" & veg_dd$Habitat != "White-sand points"]),
+                                mean(veg_dd$CCF[veg_dd$riverNS == "S" & veg_dd$Habitat != "White-sand points"])),
+                    CCFse = c(se(veg_dd$CCF[veg_dd$riverNS == "N" & veg_dd$Habitat != "White-sand points"]),
+                              se(veg_dd$CCF[veg_dd$riverNS == "S" & veg_dd$Habitat != "White-sand points"])))
+
+vegNS$lse <- vegNS$CCFmean - vegNS$CCFse
+vegNS$use <- vegNS$CCFmean + vegNS$CCFse
+
+
+vegHab <- data.frame(group = c("W", "U", "F"),
+                     CCFmean = c(mean(veg_dd$CCF[veg_dd$Habitat == "White-sand points"]),
+                                 mean(veg_dd$CCF[veg_dd$Habitat == "Upland points"]),
+                                 mean(veg_dd$CCF[veg_dd$Habitat == "Floodplain points"])),
+                     CCFse = c(se(veg_dd$CCF[veg_dd$Habitat == "White-sand points"]),
+                               se(veg_dd$CCF[veg_dd$Habitat == "Upland points"]),
+                               se(veg_dd$CCF[veg_dd$Habitat == "Floodplain points"])))
+
+vegHab$lse <- vegHab$CCFmean - vegHab$CCFse
+vegHab$use <- vegHab$CCFmean + vegHab$CCFse
+vegHab <- vegHab[3:1,]
+
+
+pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/NS_ccf_cover.pdf"), width = 5.2, height = 5)
+barplot(height = vegNS$CCFmean, ylim = c(0,45), names.arg = c("north-bank", "south-bank"),
+        col = c("gray70", "gray70"), main = "across the Amazon", ylab = "closed-canopy forest (% cover)")
+for(i in 1:2){
+  lines(c(i - .3 + 0.2*(i > 1), i - .3 + 0.2*(i > 1)), c(vegNS$lse[i], vegNS$use[i]), col = "black", lwd = 2)
+}
+dev.off()
+
+pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/Hab_ccf_cover.pdf"), width = 5.2, height = 5)
+barplot(height = vegHab$CCFmean, ylim = c(0,50), names.arg = c("floodplain", "terra firme", "white-sands"),
+        col = rep("gray70", 3), main = "across forest-types", ylab = "closed-canopy forest (% cover)")
+for(i in 1:3){
+  lines(c(i - .3 + 0.2*(i - 1), i - .3 + 0.2*(i - 1)), c(vegHab$lse[i], vegHab$use[i]), col = "black", lwd = 2)
+}
+dev.off()
