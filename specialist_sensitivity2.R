@@ -138,34 +138,34 @@ stotz <- read.csv("stotz_cdata_taxonomy.csv")
 cdata <- read.csv("cdata_updated.csv")
 
 # habitat lumping
-stotz$flood.for <- stotz$F2 %in% c("Y") | stotz$F3 %in% c("Y") | stotz$F13 %in% c("Y")
-stotz$flood.nfor <- stotz$N11 %in% c("Y") | stotz$N12 %in% c("Y") | stotz$A1 %in% c("Y") | stotz$A5 %in% c("Y") | 
-  stotz$A6 %in% c("Y") | stotz$A8 %in% c("Y") | stotz$A9 %in% c("Y")
+stotz$flood.for <- stotz$F2 %in% c("Y", "Q") | stotz$F3 %in% c("Y", "Q") | stotz$F13 %in% c("Y", "Q")
+stotz$flood.nfor <- stotz$N11 %in% c("Y", "Q") | stotz$N12 %in% c("Y", "Q") | stotz$A1 %in% c("Y", "Q") | stotz$A5 %in% c("Y", "Q") | 
+  stotz$A6 %in% c("Y", "Q") | stotz$A8 %in% c("Y", "Q") | stotz$A9 %in% c("Y", "Q")
 stotz$flood.all <- stotz$flood.for | stotz$flood.nfor
-stotz$upland.for <- stotz$F1 %in% c("Y") | stotz$F12 %in% c("Y")
-stotz$forest.based <- (stotz$flood.for == 1) | (stotz$upland.for == 1)
-stotz$tf <- stotz$F1 %in% c("Y")
+stotz$tf <- stotz$F1 %in% c("Y", "Q") | stotz$F12 %in% c("Y", "Q")
+stotz$forest.present <- (stotz$flood.for == 1) | (stotz$tf == 1)
+stotz$upland <- stotz$F1 %in% c("Y", "Q")
 
-# forest-based species
-FBsp <- as.character(stotz$sp[stotz$forest.based])
+# forest-present species
+FBsp <- as.character(stotz$sp[stotz$forest.present])
 cFBsp <- FBsp[FBsp %in% cdata$Species]
 
 # forest-specialist species
-FSsp <- as.character(stotz$sp[stotz$forest.based & !stotz$flood.nfor])
+FSsp <- as.character(stotz$sp[stotz$forest.present & !stotz$flood.nfor])
 cFSsp <- FSsp[FSsp %in% cdata$Species]
 
 # forest-based floodplain specialists
-FFsp <- as.character(stotz$sp[stotz$flood.for & !stotz$upland.for])
+FFsp <- as.character(stotz$sp[stotz$flood.for & !stotz$tf])
 cFFsp <- FFsp[FFsp %in% cdata$Species]
 
 # non-forest-based floodplain specialists (may overlap with forest-based species)
-FNsp <- as.character(stotz$sp[stotz$flood.nfor & !stotz$upland.for])
+FNsp <- as.character(stotz$sp[stotz$flood.nfor & !stotz$tf])
 cFNsp <- FNsp[FNsp %in% cdata$Species]
 
 # all floodplain specialists
 allfloodsp <- unique(c(cFFsp, cFNsp))
 
-# upland specialists
+# terra firme specialists
 TFsp <- as.character(stotz$sp[stotz$tf & !(stotz$flood.for | stotz$flood.nfor)])
 cTFsp <- TFsp[TFsp %in% cdata$Species]
 
@@ -184,8 +184,8 @@ specialists$flood[specialists$species %in% allfloodsp] <- 1
 specialists$flood[specialists$species %in% floodextras$Extras] <- 1
 specialists$tf <- 0
 specialists$tf[specialists$species %in% cTFsp] <- 1
-specialists$forest.based <- 0
-specialists$forest.based[specialists$species %in% cFBsp] <- 1
+specialists$forest.present <- 0
+specialists$forest.present[specialists$species %in% cFBsp] <- 1
 specialists$forest.specialist <- 0
 specialists$forest.specialist[specialists$species %in% cFSsp] <- 1
 
@@ -281,9 +281,9 @@ model.fits <- list()
 
 model.fits$global_stanMER <- 
   rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
-                         forest.based + forest.specialist + #forest
+                         forest.present + forest.specialist + #forest
                          StanStrat.ground + StanStrat.understory + StanStrat.midstory + diet + scale.mass + migratory + #traits
-                         river + flood + tf + poor + rich, #specialization
+                         river + flood + upland + poor + rich, #specialization
                        family = 'binomial', data = specialists, seed = 8, cores = 4)
 summary(model.fits$global_stanMER)[1:17,]
 
@@ -294,27 +294,27 @@ summary(model.fits$null_stanMER)[1:17,]
 
 model.fits$null2_stanMER <- 
   rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
-                         forest.based + forest.specialist, #forest
+                         forest.present + forest.specialist, #forest
                        family = 'binomial', data = specialists, seed = 8, cores = 4)
 summary(model.fits$null2_stanMER)[1:17,]
 
 model.fits$specialization_stanMER <- 
   rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
-                         forest.based + forest.specialist + #forest
-                         river + flood + tf + poor + rich, #specialization
+                         forest.present + forest.specialist + #forest
+                         river + flood + upland + poor + rich, #specialization
                        family = 'binomial', data = specialists, seed = 8, cores = 4)
 summary(model.fits$specialization_stanMER)[1:17,]
 
 model.fits$traits_stanMER <- 
   rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
-                         forest.based + forest.specialist + #forest
+                         forest.present + forest.specialist + #forest
                          StanStrat.ground + StanStrat.understory + StanStrat.midstory + diet + scale.mass + migratory, #traits
                        family = 'binomial', data = specialists, seed = 8, cores = 4)
 summary(model.fits$traits_stanMER)[1:17,]
 
 model.fits$traits2_stanMER <- 
   rstanarm::stan_glmer(formula = abun.double ~ (1|species) +  #null
-                         forest.based + forest.specialist + #forest
+                         forest.present + forest.specialist + #forest
                          diet + scale.mass + migratory, #traits
                        family = 'binomial', data = specialists, seed = 8, cores = 4)
 summary(model.fits$traits2_stanMER)[1:17,]
