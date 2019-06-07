@@ -1,20 +1,34 @@
-user <- "JacobSocolar"
-#user <- "Jacob"
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
-setwd(paste0("/Users/",user,"/Dropbox/Work/Iquitos/Data"))
+user <- "JacobSocolar"
+user <- "Jacob"
+setwd(paste0("/Users/",user,"/Dropbox/Work/Iquitos/Specialist_responses/Socolar_Wilcove_2019/"))
+
+##### User-defined functions #####
 '%ni%' <- Negate('%in%')
 
-cdata <- read.csv("cdata.csv", stringsAsFactors = F)
-stotz <- read.csv(paste0("/Users/",user,"/Dropbox/Work/Useful_data/Stotz_et_al/stotz_adata.csv"))
-extras <- read.csv("stotz_cdata_additions.csv")
-stotz.nb <- read.csv(paste0("/Users/",user,"/Dropbox/Work/Useful_data/Stotz_et_al/Stotz_nearctic_nonbreeding.csv"))
+##### Data import, cleaning and manipulation #####
+
+# Load data from Socolar et al 2019, available at (INSERT STABLE URL)
+iquitos_data <- read.csv(paste0("/Users/",user,"/Dropbox/Work/Iquitos/Data/cdata.csv"), stringsAsFactors = F)
+
+# Load data from Parker et al 1996. In the distribution that I obtained, there are separate
+# files for resident birds and nearctic migrants.
+stotz <- read.csv(paste0("/Users/",user,"/Dropbox/Work/Useful_data/Stotz_et_al/adata.csv"))
+stotz.nb <- read.csv(paste0("/Users/",user,"/Dropbox/Work/Useful_data/Stotz_et_al/cdata.csv"))
+
+# Load self-generated data file for taxa that do not appear in Parker et al (splits and newly-
+# described species)
+extras <- read.csv("Data/stotz_additions.csv")
+
+# Assemble single dataframe
 stotz <- gtools::smartbind(stotz, stotz.nb)
 stotz <- gtools::smartbind(stotz, extras)
 stotz$GENUS <- as.character(stotz$GENUS)
 stotz$GENUS[stotz$GENUS == "Columba"] <- "Patagioenas"
 stotz$sp <- paste(stotz$GENUS, stotz$SPECIES, sep = "_")
 
-# Update stotz taxonomy to reflect cdata taxonomy:
+# Update stotz taxonomy:
 stotz$sp[grep("Capito_niger", stotz$sp)] <- "Capito_auratus"
 stotz$sp[grep("Pitylus_grossus", stotz$sp)] <- "Saltator_grossus"
 stotz$sp[grep("Xiphorhynchus_\\(guttatus\\) guttatus", stotz$sp)] <- "Xiphorhynchus_guttatus"
@@ -111,33 +125,29 @@ stotz$sp[grep("Xiphocolaptes_\\(promeropirhynchus\\) orenocensis", stotz$sp)] <-
 stotz$sp[grep("Sporophila_\\(lineola\\) lineola", stotz$sp)] <- "Sporophila_lineola"
 stotz$sp[grep("Myiodynastes_\\(maculatus\\) solitarius", stotz$sp)] <- "Myiodynastes_maculatus"
 
-# correct cdata taxonomy where problematic:
+# correct iquitos_data taxonomy where problematic:
 # remove Trogon melanurus and Hylophylax naevius
-cdata <- cdata[-grep("Trogon_melanurus", cdata$Species), ]
-cdata <- cdata[-grep("Hylophylax_naevius", cdata$Species), ]
+iquitos_data <- iquitos_data[-grep("Trogon_melanurus", iquitos_data$Species), ]
+iquitos_data <- iquitos_data[-grep("Hylophylax_naevius", iquitos_data$Species), ]
 
 # correct spellings
-cdata$Species[which(cdata$Species == "Odonotophorus_gujanensis")] <- "Odontophorus_gujanensis"
-cdata$Species[which(cdata$Species == "Brotogeris_versicolorus")] <- "Brotogeris_versicolurus"
-cdata$Species[which(cdata$Species == "Megarhynchus_pitangua")] <- "Megarynchus_pitangua"
-cdata$Species[which(cdata$Species == "Vireo_olivaceus")] <- "Vireo_chivi"
-cdata$Species[which(cdata$Species == "Galbula_flavirostris")] <- "Galbula_albirostris"
-cdata$Species[which(cdata$Species == "Ancistrops_strigulatus")] <- "Ancistrops_strigilatus"
-cdata$Species[which(cdata$Species == "Gymnoderis_foetidus")] <- "Gymnoderus_foetidus"
-cdata$Species[which(cdata$Species == "Todirostrum_chrysocephalum")] <- "Todirostrum_chrysocrotaphum"
-cdata$Species[which(cdata$Species == "Dromococcyx_phaisanellus")] <- "Dromococcyx_phasianellus"
-cdata$Species[which(cdata$Species == "Loreto_antwren")] <- "Herpsilochmus_loreto"
+iquitos_data$Species[which(iquitos_data$Species == "Odonotophorus_gujanensis")] <- "Odontophorus_gujanensis"
+iquitos_data$Species[which(iquitos_data$Species == "Brotogeris_versicolorus")] <- "Brotogeris_versicolurus"
+iquitos_data$Species[which(iquitos_data$Species == "Megarhynchus_pitangua")] <- "Megarynchus_pitangua"
+iquitos_data$Species[which(iquitos_data$Species == "Vireo_olivaceus")] <- "Vireo_chivi"
+iquitos_data$Species[which(iquitos_data$Species == "Galbula_flavirostris")] <- "Galbula_albirostris"
+iquitos_data$Species[which(iquitos_data$Species == "Ancistrops_strigulatus")] <- "Ancistrops_strigilatus"
+iquitos_data$Species[which(iquitos_data$Species == "Gymnoderis_foetidus")] <- "Gymnoderus_foetidus"
+iquitos_data$Species[which(iquitos_data$Species == "Todirostrum_chrysocephalum")] <- "Todirostrum_chrysocrotaphum"
+iquitos_data$Species[which(iquitos_data$Species == "Dromococcyx_phaisanellus")] <- "Dromococcyx_phasianellus"
+iquitos_data$Species[which(iquitos_data$Species == "Loreto_antwren")] <- "Herpsilochmus_loreto"
 
-cdata$Species[cdata$Species %ni% stotz$sp]
+iquitos_data$Species[iquitos_data$Species %ni% stotz$sp]
 
-write.csv(stotz, file = "stotz_cdata_taxonomy.csv")
-write.csv(cdata, file = "cdata_updated.csv")
+write.csv(stotz, file = "stotz_iquitos_data_taxonomy.csv")
+write.csv(iquitos_data, file = "iquitos_data_updated.csv")
 
-################################
-stotz <- read.csv("stotz_cdata_taxonomy.csv")
-cdata <- read.csv("cdata_updated.csv")
-
-# habitat lumping
+# Aggregate habitats in Parker et al (1996) database
 stotz$flood.for <- stotz$F2 %in% c("Y", "Q") | stotz$F3 %in% c("Y", "Q") | stotz$F13 %in% c("Y", "Q")
 stotz$flood.nfor <- stotz$N11 %in% c("Y", "Q") | stotz$N12 %in% c("Y", "Q") | stotz$A1 %in% c("Y", "Q") | stotz$A5 %in% c("Y", "Q") | 
   stotz$A6 %in% c("Y", "Q") | stotz$A8 %in% c("Y", "Q") | stotz$A9 %in% c("Y", "Q")
@@ -146,37 +156,45 @@ stotz$tf <- stotz$F1 %in% c("Y", "Q") | stotz$F12 %in% c("Y", "Q")
 stotz$forest.present <- (stotz$flood.for == 1) | (stotz$tf == 1)
 stotz$upland <- stotz$F1 %in% c("Y", "Q")
 
+# Get lists of specialist species
 # forest-present species
 FBsp <- as.character(stotz$sp[stotz$forest.present])
-cFBsp <- FBsp[FBsp %in% cdata$Species]
+cFBsp <- FBsp[FBsp %in% iquitos_data$Species]
 
 # forest-specialist species
 FSsp <- as.character(stotz$sp[stotz$forest.present & !stotz$flood.nfor])
-cFSsp <- FSsp[FSsp %in% cdata$Species]
+cFSsp <- FSsp[FSsp %in% iquitos_data$Species]
 
 # forest-based floodplain specialists
 FFsp <- as.character(stotz$sp[stotz$flood.for & !stotz$tf])
-cFFsp <- FFsp[FFsp %in% cdata$Species]
+cFFsp <- FFsp[FFsp %in% iquitos_data$Species]
 
-# non-forest-based floodplain specialists (may overlap with forest-based species)
+# floodplain specialists that occur in non-forest (may overlap with forest-based species)
 FNsp <- as.character(stotz$sp[stotz$flood.nfor & !stotz$tf])
-cFNsp <- FNsp[FNsp %in% cdata$Species]
+cFNsp <- FNsp[FNsp %in% iquitos_data$Species]
 
 # all floodplain specialists
 allfloodsp <- unique(c(cFFsp, cFNsp))
 
 # terra firme specialists
 TFsp <- as.character(stotz$sp[stotz$tf & !(stotz$flood.for | stotz$flood.nfor)])
-cTFsp <- TFsp[TFsp %in% cdata$Species]
+cTFsp <- TFsp[TFsp %in% iquitos_data$Species]
 
-tfexclude <- read.csv("tf_exclude.csv", header = F)
+# Species classified as terra firme specialists based on Parker et al (1996) but
+# reclassified here as non-specialists
+tfexclude <- read.csv("Data/tf_exclude.csv", header = F)
 cTFsp <- cTFsp[cTFsp %ni% tfexclude[,1]]
 
-spec <- read.csv("specialists.csv")
-floodextras <- read.csv("flood_specialist_extras.csv")
+# Species not classified as floodplain specialists based on Parker et al (1996) but
+# reclassified here as floodplain specialists.
+floodextras <- read.csv("Data/flood_specialist_extras.csv")
 
+# rich-soil, poor-soil, river-limitation, and migratory designations, compiled from
+# Pomara et al (2012), Alvarez Alonso et al (2013), and Schulenberg et al (2010)
+spec <- read.csv("Data/specialists.csv")
 spec[is.na(spec)] <- 0
 
+##### build dataframe for modeling
 specialists <- data.frame(species=spec$Species, poor=((spec$WhiteSand.Alvarez+spec$Poorsoil.Pomara+spec$Poorsoil.extra)>0),
                           rich=((spec$Richsoil.Alvarez + spec$Richsoil.Pomara)>0), river = spec$RiverLimit, migratory = spec$Mig)
 specialists$flood <- 0
@@ -189,10 +207,11 @@ specialists$forest.present[specialists$species %in% cFBsp] <- 1
 specialists$forest.specialist <- 0
 specialists$forest.specialist[specialists$species %in% cFSsp] <- 1
 
-traits <- read.delim(paste0("/Users/",user,"/Dropbox/Work/Useful_data/EltonTraits/BirdFuncDat.txt"), header=T, stringsAsFactors = F)   # traits data (includes diet)
-traits$sciName <- gsub(" ", "_", traits$Scientific)
+##### Import Eltontraits data
+traits <- read.delim(paste0("/Users/",user,"/Dropbox/Work/Useful_data/EltonTraits/BirdFuncDat.txt"), header=T, stringsAsFactors = F)
 traits <- traits[1:9993,]
 
+# Handle taxnomic discrepancies 
 traits$sciName[traits$sciName == "Ocyalus_latirostris"] <- "Cacicus_latirostris"
 traits$sciName[traits$sciName == "Myrmotherula_hauxwelli"] <- "Isleria_hauxwelli"
 traits$sciName[traits$sciName == "Pipra_pipra"] <- "Dixiphia_pipra"
@@ -225,6 +244,7 @@ traits$sciName[traits$sciName == "Xenops_milleri"] <- "Microxenops_milleri"
 traits[nrow(traits) + 1, ] <- traits[traits$sciName == "Herpsilochmus_gentryi", ]
 traits$sciName[nrow(traits)] <- "Herpsilochmus_loreto"
 
+# Update dataframe for modeling with trait data
 specialists$bodymass <- specialists$stratum <- specialists$diet <- specialists$ForStrat.wataroundsurf <-
   specialists$ForStrat.watbelowsurf <- specialists$ForStrat.ground <- specialists$ForStrat.understory <-
   specialists$ForStrat.midhigh <- specialists$ForStrat.canopy <- specialists$ForStrat.aerial <- NA
@@ -259,8 +279,8 @@ for(i in 1:nrow(specialists)){
 specialists$abun.p <- 0
 specialists$abun.d <- 0
 for(i in 1:nrow(specialists)){
-  cp <- cdata$Count[cdata$Species == specialists$species[i] & cdata$Dis == "P"]
-  cd <- cdata$Count[cdata$Species == specialists$species[i] & cdata$Dis == "D"]
+  cp <- iquitos_data$Count[iquitos_data$Species == specialists$species[i] & iquitos_data$Dis == "P"]
+  cd <- iquitos_data$Count[iquitos_data$Species == specialists$species[i] & iquitos_data$Dis == "D"]
   if(length(cp) > 0){specialists$abun.p[i] <- sum(cp)}
   if(length(cd) > 0){specialists$abun.d[i] <- sum(cd)}
 }
@@ -277,6 +297,8 @@ specialists$StanStrat.ground <- scale(specialists$ForStrat.ground)
 specialists$StanStrat.understory <- scale(specialists$ForStrat.understory)
 specialists$StanStrat.midstory <- scale(specialists$ForStrat.midhigh)
 
+
+##### Model fitting #####
 model.fits <- list()
 
 model.fits$global_stanMER <- 
@@ -320,8 +342,10 @@ model.fits$traits2_stanMER <-
 summary(model.fits$traits2_stanMER)[1:17,]
 
 save(model.fits, file = "model_fits.Rdata")
-load("model_fits.Rdata")
 
+##### Cross-validation and model comparison #####
+load("model_fits.Rdata")
+# Cross-validation
 Xvalid <- list()
 Xvalid$global <- rstanarm::kfold(model.fits$global_stanMER)
 Xvalid$null <- rstanarm::kfold(model.fits$null_stanMER)
@@ -332,6 +356,7 @@ Xvalid$traits2 <- rstanarm::kfold(model.fits$traits2_stanMER)
 
 save(Xvalid, file = "Xvalid.Rdata")
 
+# Model-comparison
 rstanarm::compare_models(Xvalid$global, Xvalid$null, Xvalid$null2, Xvalid$specialization, Xvalid$traits, Xvalid$traits2)
 rstanarm::compare_models(Xvalid$global, Xvalid$specialization)
 rstanarm::compare_models(Xvalid$specialization, Xvalid$traits2)
@@ -340,8 +365,7 @@ rstanarm::compare_models(Xvalid$traits2, Xvalid$traits)
 rstanarm::compare_models(Xvalid$traits2, Xvalid$null2)
 rstanarm::compare_models(Xvalid$traits, Xvalid$null2)
 
-###### Percent (latent) variance explained #########
-load("model_fits.Rdata")
+# Percent (latent) variance explained
 re_variances_df <- data.frame(global = as.data.frame(model.fits$global_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2,
                               null = as.data.frame(model.fits$null_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2,
                               null2 = as.data.frame(model.fits$null2_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2,
@@ -377,39 +401,34 @@ re_variances_df <- data.frame(global = as.data.frame(model.fits$global_stanMER)$
                               traits2 = as.data.frame(model.fits$traits2_stanMER)$`Sigma[species:(Intercept),(Intercept)]`^2)
 var_explained <- function(name, df = re_variances_df){return((df["null"] - df[name])/df["null"])}
 
-
-###### Figure 2: Model comparison #####
+# Figure 2: Model comparison
 mcdf <- data.frame(model = c("global", "specialization", "traits", "traits2", "null2"),
-                 elpd = c(Xvalid$global$elpd_kfold,
-                          Xvalid$specialization$elpd_kfold,
-                          Xvalid$traits$elpd_kfold,
-                          Xvalid$traits2$elpd_kfold,
-                          Xvalid$null2$elpd_kfold),
-                 r2 = c(summary(var_explained("global")[,1])["Mean"],
+                   elpd = c(Xvalid$global$elpd_kfold,
+                            Xvalid$specialization$elpd_kfold,
+                            Xvalid$traits$elpd_kfold,
+                            Xvalid$traits2$elpd_kfold,
+                            Xvalid$null2$elpd_kfold),
+                   r2 = c(summary(var_explained("global")[,1])["Mean"],
                           summary(var_explained("specialization")[,1])["Mean"],
                           summary(var_explained("traits")[,1])["Mean"],
                           summary(var_explained("traits2")[,1])["Mean"],
                           summary(var_explained("null2")[,1])["Mean"])
-                 )
+)
 mcdf$elpd_diff <- mcdf$elpd - Xvalid$null$elpd_kfold
 mcdf$r2scaled <- mcdf$r2 * 160
 
-
-
-pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/model_comparison.pdf"), width = 8, height = 5)
-   barplot(height = t(as.matrix(mcdf[ ,c("elpd_diff", "r2scaled")])), beside = T, ylim = c(0,160), 
-        names.arg = c("global", "specialization", "traits", "traits2", "null2"),
-        col = c("gray60", "gray90"), main = "model comparison", 
-        xlab = "model", legend = c("ELPD improvement", "r-squared"),
-        axes = F)
-   axis(side = 2, at = seq(0,160,40))
-   axis(side = 4, at = seq(0,160,16), labels=as.character(seq(0,1,.1)))
+pdf(file = "Figures/model_comparison.pdf", width = 8, height = 5)
+    barplot(height = t(as.matrix(mcdf[ ,c("elpd_diff", "r2scaled")])), beside = T, ylim = c(0,160), 
+            names.arg = c("global", "specialization", "traits", "traits2", "null2"),
+            col = c("gray60", "gray90"), main = "model comparison", 
+            xlab = "model", legend = c("ELPD improvement", "R-squared"),
+            axes = F)
+    axis(side = 2, at = seq(0,160,40))
+    axis(side = 4, at = seq(0,160,16), labels=as.character(seq(0,1,.1)))
 dev.off()
 
 
-###### Figure 3: Parameter estimates from GLMs #####
-###### Extract parameter estimates for plotting ###########
-# How many total parameters?
+# Figure 3: Parameter estimates from GLMs
 pn <- vector()
 pnames <- vector()
 pmu <- vector()
@@ -457,8 +476,7 @@ for(i in 1:n.coef){
   }
 }
 
-
-pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/GLM_coefs.pdf"), width = 10.5, height = 10)
+pdf(file = "Figures/GLM_coefs.pdf", width = 10.5, height = 10)
     plot(c(1,1), t='n', axes=F, xlab = 'effect size', ylab = "", xlim = c(-8,13), ylim = c(0,22))
     rect(xleft = -8, xright = 13, ybottom = ph[5] - .25, ytop = ph[6] - .1, col = 'gray94', border = NA)
     rect(xleft = -8, xright = 13, ybottom = ph[15] - .25, ytop = ph[17] - .1, col = 'gray94', border = NA)
@@ -481,12 +499,12 @@ pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/G
     }
 dev.off()
 
-###### Figure 4: floodplain birds in disturbed and intact floodplains and uplands #####
-cdata$tpt <- paste(cdata$Transect, cdata$Point, sep = "_")
-allpoints <- cdata[!duplicated(cdata$tpt), c('Transect', 'Hab', 'Dis', 'Point', 'tpt')]
+# Figure 4: floodplain specialist proliferation
+iquitos_data$tpt <- paste(iquitos_data$Transect, iquitos_data$Point, sep = "_")
+allpoints <- iquitos_data[!duplicated(iquitos_data$tpt), c('Transect', 'Hab', 'Dis', 'Point', 'tpt')]
 allpoints$nfloodsp <- 0
 allpoints$nfloodindiv <- 0
-fdata <- cdata[cdata$Species %in% allfloodsp, ]
+fdata <- iquitos_data[iquitos_data$Species %in% allfloodsp, ]
 for(i in 1:nrow(allpoints)){
   fdata_pt <- fdata[fdata$tpt == allpoints$tpt[i], ]
   allpoints$nfloodsp[i] <- length(unique(fdata_pt$Species))
@@ -523,14 +541,13 @@ barplotdata <- data.frame(group = c("f.p", "f.d", "t.p", "t.d"),
                                       se(allpoints$nfloodindiv[allpoints$Hab == "V" & allpoints$Dis == "D"]),
                                       se(allpoints$nfloodindiv[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "P"]),
                                       se(allpoints$nfloodindiv[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "D"]))
-                          )
+)
 barplotdata$lse.rich <- barplotdata$mean.rich - barplotdata$se.rich
 barplotdata$use.rich <- barplotdata$mean.rich + barplotdata$se.rich
 barplotdata$lse.abun <- barplotdata$mean.abun - barplotdata$se.abun
 barplotdata$use.abun <- barplotdata$mean.abun + barplotdata$se.abun
 
-
-pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/flood_specialist_rich.pdf"), width = 5.2, height = 5)
+pdf(file = "Figures/flood_specialist_rich.pdf", width = 5.2, height = 5)
     barplot(height = matrix(barplotdata$mean.rich, nrow = 2), beside = T, ylim = c(0,22), names.arg = c("floodplain", "terra firme"),
             col = c("gray60", "gray90"), main = "floodplain specialist richness", xlab = "forest-type", legend = c("primary forest", "agriculture"))
     for(i in 1:4){
@@ -538,7 +555,7 @@ pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/f
     }
 dev.off()
 
-pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/flood_specialist_abun.pdf"), width = 5.2, height = 5)
+pdf(file = "Figures/flood_specialist_abun.pdf", width = 5.2, height = 5)
     barplot(height = matrix(barplotdata$mean.abun, nrow = 2), beside = T, ylim = c(0,37), names.arg = c("floodplain", "terra firme"),
             col = c("gray60", "gray90"), main = "floodplain specialist abundance", xlab = "forest-type", legend = c("primary forest", "agriculture"))
     for(i in 1:4){
@@ -546,9 +563,8 @@ pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/f
     }
 dev.off()
 
-
 ###### Plotting veg data ######
-veg_data <- read.csv("/Users/JacobSocolar/Dropbox/Work/Iquitos/Data/Transect_locations.csv", fileEncoding = "latin1")
+veg_data <- read.csv("/Users/Jacob/Dropbox/Work/Iquitos/Data/Transect_locations.csv", fileEncoding = "latin1")
 veg_data[is.na(veg_data)] <- 0
 veg_data <- veg_data[-which(veg_data$Discard == 1), ]
 veg_d <- veg_data[veg_data$Disturbance == "D", ]
@@ -603,18 +619,18 @@ vegHab$use <- vegHab$CCFmean + vegHab$CCFse
 vegHab <- vegHab[3:1,]
 
 
-pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/NS_ccf_cover.pdf"), width = 5.2, height = 5)
-    barplot(height = vegNS$CCFmean, ylim = c(0,45), names.arg = c("north-bank", "south-bank"),
-            col = c("gray70", "gray70"), main = "across the Amazon", ylab = "closed-canopy forest (% cover)")
-    for(i in 1:2){
-      lines(c(i - .3 + 0.2*(i > 1), i - .3 + 0.2*(i > 1)), c(vegNS$lse[i], vegNS$use[i]), col = "black", lwd = 2)
-    }
+pdf(file = "Figures/NS_ccf_cover.pdf", width = 5.2, height = 5)
+barplot(height = vegNS$CCFmean, ylim = c(0,45), names.arg = c("north-bank", "south-bank"),
+        col = c("gray70", "gray70"), main = "across the Amazon", ylab = "closed-canopy forest (% cover)")
+for(i in 1:2){
+  lines(c(i - .3 + 0.2*(i > 1), i - .3 + 0.2*(i > 1)), c(vegNS$lse[i], vegNS$use[i]), col = "black", lwd = 2)
+}
 dev.off()
 
-pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/Hab_ccf_cover.pdf"), width = 5.2, height = 5)
-    barplot(height = vegHab$CCFmean, ylim = c(0,50), names.arg = c("floodplain", "terra firme", "white-sands"),
-            col = rep("gray70", 3), main = "across forest-types", ylab = "closed-canopy forest (% cover)")
-    for(i in 1:3){
-      lines(c(i - .3 + 0.2*(i - 1), i - .3 + 0.2*(i - 1)), c(vegHab$lse[i], vegHab$use[i]), col = "black", lwd = 2)
-    }
+pdf(file = "Figures/Hab_ccf_cover.pdf", width = 5.2, height = 5)
+barplot(height = vegHab$CCFmean, ylim = c(0,50), names.arg = c("floodplain", "terra firme", "white-sands"),
+        col = rep("gray70", 3), main = "across forest-types", ylab = "closed-canopy forest (% cover)")
+for(i in 1:3){
+  lines(c(i - .3 + 0.2*(i - 1), i - .3 + 0.2*(i - 1)), c(vegHab$lse[i], vegHab$use[i]), col = "black", lwd = 2)
+}
 dev.off()

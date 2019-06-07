@@ -1,13 +1,13 @@
-user <- "JacobSocolar"
-#user <- "Jacob"
-
-setwd(paste0("/Users/",user,"/Dropbox/Work/Iquitos/Data"))
+# User-defined functions
 '%ni%' <- Negate('%in%')
 
+# Load data from Socolar et al 2019, available at (INSERT STABLE URL)
 cdata <- read.csv("cdata.csv", stringsAsFactors = F)
+
 stotz <- read.csv(paste0("/Users/",user,"/Dropbox/Work/Useful_data/Stotz_et_al/stotz_adata.csv"))
-extras <- read.csv("stotz_cdata_additions.csv")
 stotz.nb <- read.csv(paste0("/Users/",user,"/Dropbox/Work/Useful_data/Stotz_et_al/Stotz_nearctic_nonbreeding.csv"))
+
+extras <- read.csv("stotz_cdata_additions.csv")
 stotz <- gtools::smartbind(stotz, stotz.nb)
 stotz <- gtools::smartbind(stotz, extras)
 stotz$GENUS <- as.character(stotz$GENUS)
@@ -338,7 +338,7 @@ rstanarm::compare_models(Xvalid$specialization, Xvalid$traits2)
 rstanarm::compare_models(Xvalid$specialization, Xvalid$traits)
 rstanarm::compare_models(Xvalid$traits2, Xvalid$traits)
 rstanarm::compare_models(Xvalid$traits2, Xvalid$null2)
-rstanarm::compare_models(Xvalid$traits, Xvalid$null2)
+16.rstanarm::compare_models(Xvalid$traits, Xvalid$null2)
 
 ###### Percent (latent) variance explained #########
 load("model_fits.Rdata")
@@ -380,30 +380,30 @@ var_explained <- function(name, df = re_variances_df){return((df["null"] - df[na
 
 ###### Figure 2: Model comparison #####
 mcdf <- data.frame(model = c("global", "specialization", "traits", "traits2", "null2"),
-                 elpd = c(Xvalid$global$elpd_kfold,
-                          Xvalid$specialization$elpd_kfold,
-                          Xvalid$traits$elpd_kfold,
-                          Xvalid$traits2$elpd_kfold,
-                          Xvalid$null2$elpd_kfold),
-                 r2 = c(summary(var_explained("global")[,1])["Mean"],
+                   elpd = c(Xvalid$global$elpd_kfold,
+                            Xvalid$specialization$elpd_kfold,
+                            Xvalid$traits$elpd_kfold,
+                            Xvalid$traits2$elpd_kfold,
+                            Xvalid$null2$elpd_kfold),
+                   r2 = c(summary(var_explained("global")[,1])["Mean"],
                           summary(var_explained("specialization")[,1])["Mean"],
                           summary(var_explained("traits")[,1])["Mean"],
                           summary(var_explained("traits2")[,1])["Mean"],
                           summary(var_explained("null2")[,1])["Mean"])
-                 )
+)
 mcdf$elpd_diff <- mcdf$elpd - Xvalid$null$elpd_kfold
 mcdf$r2scaled <- mcdf$r2 * 160
 
 
 
 pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/model_comparison.pdf"), width = 8, height = 5)
-   barplot(height = t(as.matrix(mcdf[ ,c("elpd_diff", "r2scaled")])), beside = T, ylim = c(0,160), 
+barplot(height = t(as.matrix(mcdf[ ,c("elpd_diff", "r2scaled")])), beside = T, ylim = c(0,160), 
         names.arg = c("global", "specialization", "traits", "traits2", "null2"),
         col = c("gray60", "gray90"), main = "model comparison", 
         xlab = "model", legend = c("ELPD improvement", "r-squared"),
         axes = F)
-   axis(side = 2, at = seq(0,160,40))
-   axis(side = 4, at = seq(0,160,16), labels=as.character(seq(0,1,.1)))
+axis(side = 2, at = seq(0,160,40))
+axis(side = 4, at = seq(0,160,16), labels=as.character(seq(0,1,.1)))
 dev.off()
 
 
@@ -459,26 +459,26 @@ for(i in 1:n.coef){
 
 
 pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/GLM_coefs.pdf"), width = 10.5, height = 10)
-    plot(c(1,1), t='n', axes=F, xlab = 'effect size', ylab = "", xlim = c(-8,13), ylim = c(0,22))
-    rect(xleft = -8, xright = 13, ybottom = ph[5] - .25, ytop = ph[6] - .1, col = 'gray94', border = NA)
-    rect(xleft = -8, xright = 13, ybottom = ph[15] - .25, ytop = ph[17] - .1, col = 'gray94', border = NA)
-    lines(c(0,0), c(0,22), col = 'gray')
-    axis(side = 1, at = 2*c(-4:4))
-    
-    plotting_height <- 0
-    for(i in 1:n.coef){
-      plotting_height <- plotting_height + .5
-      counter <- 0
-      for(j in 1:n.model){
-        k <- which(param_est$model == model.names[n.model + 1 - j] & param_est$parameter == coef.names[n.coef + 1 - i])
-        if(length(k) == 1){
-          counter <- counter + 1
-          plotting_height <- plotting_height + .25
-          lines(c(param_est$L95[k], param_est$U95[k]), rep(plotting_height, 2), col = param_est$color[k])
-          points(x = param_est$pMean[k], y = plotting_height, col = param_est$color[k], pch = pchs[j], bg = param_est$color[k])
-        }
-      }
+plot(c(1,1), t='n', axes=F, xlab = 'effect size', ylab = "", xlim = c(-8,13), ylim = c(0,22))
+rect(xleft = -8, xright = 13, ybottom = ph[5] - .25, ytop = ph[6] - .1, col = 'gray94', border = NA)
+rect(xleft = -8, xright = 13, ybottom = ph[15] - .25, ytop = ph[17] - .1, col = 'gray94', border = NA)
+lines(c(0,0), c(0,22), col = 'gray')
+axis(side = 1, at = 2*c(-4:4))
+
+plotting_height <- 0
+for(i in 1:n.coef){
+  plotting_height <- plotting_height + .5
+  counter <- 0
+  for(j in 1:n.model){
+    k <- which(param_est$model == model.names[n.model + 1 - j] & param_est$parameter == coef.names[n.coef + 1 - i])
+    if(length(k) == 1){
+      counter <- counter + 1
+      plotting_height <- plotting_height + .25
+      lines(c(param_est$L95[k], param_est$U95[k]), rep(plotting_height, 2), col = param_est$color[k])
+      points(x = param_est$pMean[k], y = plotting_height, col = param_est$color[k], pch = pchs[j], bg = param_est$color[k])
     }
+  }
+}
 dev.off()
 
 ###### Figure 4: floodplain birds in disturbed and intact floodplains and uplands #####
@@ -523,7 +523,7 @@ barplotdata <- data.frame(group = c("f.p", "f.d", "t.p", "t.d"),
                                       se(allpoints$nfloodindiv[allpoints$Hab == "V" & allpoints$Dis == "D"]),
                                       se(allpoints$nfloodindiv[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "P"]),
                                       se(allpoints$nfloodindiv[allpoints$Hab %in% c("W", "U") & allpoints$Dis == "D"]))
-                          )
+)
 barplotdata$lse.rich <- barplotdata$mean.rich - barplotdata$se.rich
 barplotdata$use.rich <- barplotdata$mean.rich + barplotdata$se.rich
 barplotdata$lse.abun <- barplotdata$mean.abun - barplotdata$se.abun
@@ -531,19 +531,19 @@ barplotdata$use.abun <- barplotdata$mean.abun + barplotdata$se.abun
 
 
 pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/flood_specialist_rich.pdf"), width = 5.2, height = 5)
-    barplot(height = matrix(barplotdata$mean.rich, nrow = 2), beside = T, ylim = c(0,22), names.arg = c("floodplain", "terra firme"),
-            col = c("gray60", "gray90"), main = "floodplain specialist richness", xlab = "forest-type", legend = c("primary forest", "agriculture"))
-    for(i in 1:4){
-      lines(c(.5 + i + (i > 2), .5 + i + (i > 2)), c(barplotdata$lse.rich[i], barplotdata$use.rich[i]), col = "black", lwd = 2)
-    }
+barplot(height = matrix(barplotdata$mean.rich, nrow = 2), beside = T, ylim = c(0,22), names.arg = c("floodplain", "terra firme"),
+        col = c("gray60", "gray90"), main = "floodplain specialist richness", xlab = "forest-type", legend = c("primary forest", "agriculture"))
+for(i in 1:4){
+  lines(c(.5 + i + (i > 2), .5 + i + (i > 2)), c(barplotdata$lse.rich[i], barplotdata$use.rich[i]), col = "black", lwd = 2)
+}
 dev.off()
 
 pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/flood_specialist_abun.pdf"), width = 5.2, height = 5)
-    barplot(height = matrix(barplotdata$mean.abun, nrow = 2), beside = T, ylim = c(0,37), names.arg = c("floodplain", "terra firme"),
-            col = c("gray60", "gray90"), main = "floodplain specialist abundance", xlab = "forest-type", legend = c("primary forest", "agriculture"))
-    for(i in 1:4){
-      lines(c(.5 + i + (i > 2), .5 + i + (i > 2)), c(barplotdata$lse.abun[i], barplotdata$use.abun[i]), col = "black", lwd = 2)
-    }
+barplot(height = matrix(barplotdata$mean.abun, nrow = 2), beside = T, ylim = c(0,37), names.arg = c("floodplain", "terra firme"),
+        col = c("gray60", "gray90"), main = "floodplain specialist abundance", xlab = "forest-type", legend = c("primary forest", "agriculture"))
+for(i in 1:4){
+  lines(c(.5 + i + (i > 2), .5 + i + (i > 2)), c(barplotdata$lse.abun[i], barplotdata$use.abun[i]), col = "black", lwd = 2)
+}
 dev.off()
 
 
@@ -604,17 +604,17 @@ vegHab <- vegHab[3:1,]
 
 
 pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/NS_ccf_cover.pdf"), width = 5.2, height = 5)
-    barplot(height = vegNS$CCFmean, ylim = c(0,45), names.arg = c("north-bank", "south-bank"),
-            col = c("gray70", "gray70"), main = "across the Amazon", ylab = "closed-canopy forest (% cover)")
-    for(i in 1:2){
-      lines(c(i - .3 + 0.2*(i > 1), i - .3 + 0.2*(i > 1)), c(vegNS$lse[i], vegNS$use[i]), col = "black", lwd = 2)
-    }
+barplot(height = vegNS$CCFmean, ylim = c(0,45), names.arg = c("north-bank", "south-bank"),
+        col = c("gray70", "gray70"), main = "across the Amazon", ylab = "closed-canopy forest (% cover)")
+for(i in 1:2){
+  lines(c(i - .3 + 0.2*(i > 1), i - .3 + 0.2*(i > 1)), c(vegNS$lse[i], vegNS$use[i]), col = "black", lwd = 2)
+}
 dev.off()
 
 pdf(file = paste0("/Users/", user, "/Dropbox/Work/Iquitos/Specialist_responses/Hab_ccf_cover.pdf"), width = 5.2, height = 5)
-    barplot(height = vegHab$CCFmean, ylim = c(0,50), names.arg = c("floodplain", "terra firme", "white-sands"),
-            col = rep("gray70", 3), main = "across forest-types", ylab = "closed-canopy forest (% cover)")
-    for(i in 1:3){
-      lines(c(i - .3 + 0.2*(i - 1), i - .3 + 0.2*(i - 1)), c(vegHab$lse[i], vegHab$use[i]), col = "black", lwd = 2)
-    }
+barplot(height = vegHab$CCFmean, ylim = c(0,50), names.arg = c("floodplain", "terra firme", "white-sands"),
+        col = rep("gray70", 3), main = "across forest-types", ylab = "closed-canopy forest (% cover)")
+for(i in 1:3){
+  lines(c(i - .3 + 0.2*(i - 1), i - .3 + 0.2*(i - 1)), c(vegHab$lse[i], vegHab$use[i]), col = "black", lwd = 2)
+}
 dev.off()
